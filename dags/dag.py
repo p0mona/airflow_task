@@ -6,7 +6,11 @@ from airflow.operators.bash import BashOperator
 from airflow.utils.task_group import TaskGroup
 from datetime import datetime, timedelta
 import pandas as pd
+import copy
 import os
+
+# СДЕЛАТЬ РАЗДЕЛЕНИЕ ФАЙЛОВ, ТО ЕСТЬ DZIAŁAMY на копиии БЕЗ ПЕРЕЗАПИСИ ИНПУТА!!!
+
 
 default_args = {
     'owner': 'airflow',
@@ -18,9 +22,9 @@ filepath = 'data/input.csv'
 
 def decide_branch():
     if os.path.getsize(filepath) == 0:
-        return 'empty_file_task'
+        return 'empty'
     else:
-        return 'not_empty_file_task'
+        return 'not_empty.replace'
     
 def replace():
     df = pd.read_csv(filepath)
@@ -29,7 +33,16 @@ def replace():
 
 def sort():
     df = pd.read_csv(filepath)
-    df.sort_values('created_date')
+    df.sort_values('at', inplace=True)
+    df.to_csv(filepath, index=False)
+
+def clean():
+    df = pd.read_csv(filepath)
+    df['content'] = df['content'].str.replace(
+        r"[^\w.,!?;:\-()… ]+",
+        "",
+        regex=True
+    )
     df.to_csv(filepath, index=False)
 
 with DAG(
@@ -65,5 +78,12 @@ with DAG(
             task_id="sort",
             python_callable=sort
         )
+
+        clean_task = PythonOperator(
+            task_id="clean",
+            python_callable=clean
+        )
+
+        replace_task >> sort_task >> clean_task
 
     sensor_task >> branch_task >> [empty_file_task, not_empty]
