@@ -27,6 +27,11 @@ def replace():
     df.fillna('-', inplace=True)
     df.to_csv(filepath, index=False)
 
+def sort():
+    df = pd.read_csv(filepath)
+    df.sort_values('created_date')
+    df.to_csv(filepath, index=False)
+
 with DAG(
     dag_id="airflow_task",
     schedule=None,
@@ -54,6 +59,11 @@ with DAG(
         replace_task = PythonOperator(
             task_id="replace",
             python_callable=replace
+        )
+
+        sort_task = PythonOperator(
+            task_id="sort",
+            python_callable=sort
         )
 
     sensor_task >> branch_task >> [empty_file_task, not_empty]
