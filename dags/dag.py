@@ -1,9 +1,11 @@
 from airflow import DAG
 from airflow.sensors.filesystem import FileSensor
 from airflow.operators.python_operator import BranchPythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.utils.task_group import TaskGroup
 from datetime import datetime, timedelta
+import pandas as pd
 import os
 
 default_args = {
@@ -19,6 +21,11 @@ def decide_branch():
         return 'empty_file_task'
     else:
         return 'not_empty_file_task'
+    
+def replace():
+    df = pd.read_csv(filepath)
+    df.fillna('-', inplace=True)
+    df.to_csv(filepath, index=False)
 
 dag = DAG(
     dag_id="airflow_task",
@@ -47,7 +54,10 @@ empty_file_task = BashOperator(
 )
 
 with TaskGroup(group_id="not_empty") as not_empty:
-    
-    ...
+    replace_task = PythonOperator(
+        task_id="replace",
+        python_callable=replace,
+        dag=dag
+    )
 
 sensor_task >> branch_task >> [empty_file_task, not_empty]
