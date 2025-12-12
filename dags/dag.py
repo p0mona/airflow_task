@@ -6,11 +6,7 @@ from airflow.operators.bash import BashOperator
 from airflow.utils.task_group import TaskGroup
 from datetime import datetime, timedelta
 import pandas as pd
-import copy
 import os
-
-# СДЕЛАТЬ РАЗДЕЛЕНИЕ ФАЙЛОВ, ТО ЕСТЬ DZIAŁAMY на копиии БЕЗ ПЕРЕЗАПИСИ ИНПУТА!!!
-
 
 default_args = {
     'owner': 'airflow',
@@ -18,32 +14,35 @@ default_args = {
     'retry_delay': timedelta(minutes=5)
 }
 
-filepath = 'data/input.csv'
+input_file = 'data/input.csv'
+copy_file = 'data/copy.csv'
 
 def decide_branch():
-    if os.path.getsize(filepath) == 0:
+    if os.path.getsize(input_file) == 0:
         return 'empty'
     else:
+        df = pd.read_csv(input_file)
+        df.to_csv(copy_file, index=False)
         return 'not_empty.replace'
     
 def replace():
-    df = pd.read_csv(filepath)
+    df = pd.read_csv(copy_file)
     df.fillna('-', inplace=True)
-    df.to_csv(filepath, index=False)
+    df.to_csv(copy_file, index=False)
 
 def sort():
-    df = pd.read_csv(filepath)
+    df = pd.read_csv(copy_file)
     df.sort_values('at', inplace=True)
-    df.to_csv(filepath, index=False)
+    df.to_csv(copy_file, index=False)
 
 def clean():
-    df = pd.read_csv(filepath)
+    df = pd.read_csv(copy_file)
     df['content'] = df['content'].str.replace(
         r"[^\w.,!?;:\-()… ]+",
         "",
         regex=True
     )
-    df.to_csv(filepath, index=False)
+    df.to_csv(copy_file, index=False)
 
 with DAG(
     dag_id="airflow_task",
@@ -54,7 +53,7 @@ with DAG(
 
     sensor_task = FileSensor(
         task_id = 'sensor',
-        filepath= filepath,
+        filepath= input_file,
         poke_interval= 30
     )
 
