@@ -4,6 +4,8 @@ from airflow.operators.python_operator import BranchPythonOperator
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.utils.task_group import TaskGroup
+from airflow.providers.mongo.hooks.mongo import MongoHook
+from airflow import Dataset
 from datetime import datetime, timedelta
 import pandas as pd
 import os
@@ -16,6 +18,8 @@ default_args = {
 
 input_file = 'data/input.csv'
 copy_file = 'data/copy.csv'
+
+ds = Dataset(f"file://data/copy.csv")
 
 def decide_branch():
     if os.path.getsize(input_file) == 0:
@@ -49,7 +53,7 @@ with DAG(
     schedule=None,
     default_args=default_args,
     start_date=datetime(2025, 12, 10)
-) as dag:
+) as dag1:
 
     sensor_task = FileSensor(
         task_id = 'sensor',
@@ -80,9 +84,29 @@ with DAG(
 
         clean_task = PythonOperator(
             task_id="clean",
-            python_callable=clean
+            python_callable=clean,
+            outlets=[ds]
         )
 
         replace_task >> sort_task >> clean_task
 
     sensor_task >> branch_task >> [empty_file_task, not_empty]
+
+def load_to_mongo():
+    df = pd.read_csv('data/copy.csv', quotechar='"')
+    mongo = MongoHook(conn_id='mongo_default')
+    collection = mongo.get_collection('mycollection')
+    collection.insert_many(df.to_dict('records'))
+
+with DAG(
+    dag_id="airflow_mongo_task",
+    schedule=[ds],
+    default_args=default_args,
+    start_date=datetime(2025, 12, 10)
+) as dag2:
+    load_data = PythonOperator(
+        task_id='load_to_mongo',
+        python_callable=load_to_mongo,
+    )
+
+    load_data
