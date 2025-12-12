@@ -4,7 +4,8 @@ from airflow.operators.python_operator import BranchPythonOperator
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.utils.task_group import TaskGroup
-from airflow.providers.mongo.hooks.mongo import MongoHook
+from airflow.hooks.base import BaseHook
+from pymongo import MongoClient
 from airflow import Dataset
 from datetime import datetime, timedelta
 import pandas as pd
@@ -93,10 +94,22 @@ with DAG(
     sensor_task >> branch_task >> [empty_file_task, not_empty]
 
 def load_to_mongo():
-    df = pd.read_csv('data/copy.csv', quotechar='"')
-    mongo = MongoHook(conn_id='mongo_default')
-    collection = mongo.get_collection('mycollection')
-    collection.insert_many(df.to_dict('records'))
+    conn = BaseHook.get_connection('mongo_default')
+    
+    uri = f"mongodb://{conn.login}:{conn.password}@{conn.host}:{conn.port}/?authSource=admin"
+    df = pd.read_csv(copy_file)
+    
+    client = MongoClient(uri, serverSelectionTimeoutMS=5000)
+    db = client.get_database('airflow_db')
+    collection = db.get_collection('mycollection')
+    
+    if not df.empty:
+        data = df.fillna("-").to_dict('records')
+        collection.delete_many({})
+        collection.insert_many(data)
+        print(f"Successfully loaded {len(df)} rows.")
+    else:
+        print("No data available for loading.")
 
 with DAG(
     dag_id="airflow_mongo_task",
