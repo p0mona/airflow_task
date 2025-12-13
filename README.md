@@ -6,4 +6,4 @@
 
 ### Data-aware scheduling
 
-<img src="pics/both.png" alt="Data-aware scheduling" width="300">
+<img src="pics/both.png" alt="Data-aware scheduling" width="200">
