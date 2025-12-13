@@ -1,7 +1,9 @@
 # DAG Visualizations
 ### This is the main Directed Acyclic Graph (DAG) responsible for processing information.
-![producer](pics/first.png "Producer")
+
+<img src="pics/first.png" alt="Producer" width="600">
 
 
 ### Data-aware scheduling
-![Data-aware scheduling](pics/both.png "Data-aware scheduling")
+
+<img src="pics/both.png" alt="Data-aware scheduling" width="300">
