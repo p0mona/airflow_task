@@ -1,20 +1,9 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.hooks.base import BaseHook
-from airflow import Dataset
-from datetime import datetime, timedelta
+from settings import DEFAULT_ARGS, COPY_FILE, DS
+from datetime import datetime
 import pandas as pd
-
-default_args = {
-    'owner': 'airflow',
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5)
-}
-
-input_file = 'data/input.csv'
-copy_file = 'data/copy.csv'
-
-ds = Dataset(f"file://data/copy.csv")
 
 def load_to_mongo():
     from pymongo import MongoClient
@@ -22,7 +11,7 @@ def load_to_mongo():
     conn = BaseHook.get_connection('mongo_default')
     
     uri = f"mongodb://{conn.login}:{conn.password}@{conn.host}:{conn.port}/?authSource=admin"
-    df = pd.read_csv(copy_file)
+    df = pd.read_csv(COPY_FILE)
     
     client = MongoClient(uri, serverSelectionTimeoutMS=5000)
     db = client.get_database('airflow_db')
@@ -38,8 +27,8 @@ def load_to_mongo():
 
 with DAG(
     dag_id="consumer",
-    schedule=[ds],
-    default_args=default_args,
+    schedule=[DS],
+    default_args=DEFAULT_ARGS,
     start_date=datetime(2025, 12, 10)
 ) as dag2:
     load_data = PythonOperator(

@@ -4,59 +4,48 @@ from airflow.operators.python_operator import BranchPythonOperator
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.utils.task_group import TaskGroup
-from airflow import Dataset
-from datetime import datetime, timedelta
+from settings import DEFAULT_ARGS, INPUT_FILE, COPY_FILE, DS
+from datetime import datetime
 import pandas as pd
 import os
 
-default_args = {
-    'owner': 'airflow',
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5)
-}
-
-input_file = 'data/input.csv'
-copy_file = 'data/copy.csv'
-
-ds = Dataset(f"file://data/copy.csv")
-
 def decide_branch():
-    if os.path.getsize(input_file) == 0:
+    if os.path.getsize(INPUT_FILE) == 0:
         return 'empty'
     else:
-        df = pd.read_csv(input_file)
-        df.to_csv(copy_file, index=False)
+        df = pd.read_csv(INPUT_FILE)
+        df.to_csv(COPY_FILE, index=False)
         return 'not_empty.replace'
     
 def replace():
-    df = pd.read_csv(copy_file)
+    df = pd.read_csv(COPY_FILE)
     df.fillna('-', inplace=True)
-    df.to_csv(copy_file, index=False)
+    df.to_csv(COPY_FILE, index=False)
 
 def sort():
-    df = pd.read_csv(copy_file)
+    df = pd.read_csv(COPY_FILE)
     df.sort_values('at', inplace=True)
-    df.to_csv(copy_file, index=False)
+    df.to_csv(COPY_FILE, index=False)
 
 def clean():
-    df = pd.read_csv(copy_file)
+    df = pd.read_csv(COPY_FILE)
     df['content'] = df['content'].str.replace(
         r"[^\w.,!?;:\-()… ]+",
         "",
         regex=True
     )
-    df.to_csv(copy_file, index=False)
+    df.to_csv(COPY_FILE, index=False)
 
 with DAG(
     dag_id="producer",
     schedule=None,
-    default_args=default_args,
+    default_args=DEFAULT_ARGS,
     start_date=datetime(2025, 12, 10)
 ) as dag1:
 
     sensor_task = FileSensor(
         task_id = 'sensor',
-        filepath= input_file,
+        filepath= INPUT_FILE,
         poke_interval= 30
     )
 
@@ -84,7 +73,7 @@ with DAG(
         clean_task = PythonOperator(
             task_id="clean",
             python_callable=clean,
-            outlets=[ds]
+            outlets=[DS]
         )
 
         replace_task >> sort_task >> clean_task
