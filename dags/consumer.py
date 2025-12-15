@@ -5,7 +5,7 @@ from settings import DEFAULT_ARGS, COPY_FILE, DS
 from datetime import datetime
 import pandas as pd
 
-def load_to_mongo():
+def load_to_mongo() -> None:
     from pymongo import MongoClient
     
     conn = BaseHook.get_connection('mongo_default')

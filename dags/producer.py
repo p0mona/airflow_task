@@ -9,7 +9,7 @@ from datetime import datetime
 import pandas as pd
 import os
 
-def decide_branch():
+def decide_branch() -> str:
     if os.path.getsize(INPUT_FILE) == 0:
         return 'empty'
     else:
@@ -17,17 +17,17 @@ def decide_branch():
         df.to_csv(COPY_FILE, index=False)
         return 'not_empty.replace'
     
-def replace():
+def replace() -> None:
     df = pd.read_csv(COPY_FILE)
     df.fillna('-', inplace=True)
     df.to_csv(COPY_FILE, index=False)
 
-def sort():
+def sort() -> None:
     df = pd.read_csv(COPY_FILE)
     df.sort_values('at', inplace=True)
     df.to_csv(COPY_FILE, index=False)
 
-def clean():
+def clean() -> None:
     df = pd.read_csv(COPY_FILE)
     df['content'] = df['content'].str.replace(
         r"[^\w.,!?;:\-()… ]+",
