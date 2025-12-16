@@ -7,7 +7,8 @@ DEFAULT_ARGS = {
     'retry_delay': timedelta(minutes=5)
 }
 
-INPUT_FILE = 'data/input.csv'
+INPUT_PATH = 'data/'
 COPY_FILE = 'data/copy.csv'
 
 DS = Dataset(f"file://{COPY_FILE}")
+ARCHIVE_FORMAT = '.zip'

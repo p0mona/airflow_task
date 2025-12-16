@@ -1,5 +1,6 @@
 logs
 venv
 dags/__pycache__
-data/copy.csv
+data
 .env
+.DS_Store
